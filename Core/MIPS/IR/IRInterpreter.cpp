@@ -499,7 +499,7 @@ u32 IRInterpret(MIPSState *mips, const IRInst *inst) {
 #elif PPSSPP_ARCH(ARM_NEON)
 			const uint8x8_t value = (uint8x8_t)vdup_n_u32(mips->fi[inst->src1]);
 			const uint16x8_t value16 = vmovl_u8(value);
-			const uint32x4_t value32 = vshll_n_u16(vget_low_u16(value16), 24);
+			const uint32x4_t value32 = vshlq_n_u32(vshll_n_u16(vget_low_u16(value16), 8), 16);  // note: vshll has a range limited to 0..16
 			vst1q_u32(&mips->fi[inst->dest], value32);
 #else
 			mips->fi[inst->dest] = (mips->fi[inst->src1] << 24);
