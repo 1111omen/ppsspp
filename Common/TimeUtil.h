@@ -5,7 +5,7 @@
 
 void TimeInit();
 
-// Seconds.
+// Seconds from app start.
 double time_now_d();
 
 // Raw time in nanoseconds.
@@ -15,6 +15,7 @@ uint64_t time_now_raw();
 // This is only interesting for Linux, in relation to VK_GOOGLE_display_timing.
 double from_time_raw(uint64_t raw_time);
 double from_time_raw_relative(uint64_t raw_time);
+double from_mach_time_interval(double interval);
 
 // Seconds, Unix UTC time
 double time_now_unix_utc();

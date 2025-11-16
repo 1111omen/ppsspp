@@ -152,6 +152,10 @@ double from_time_raw_relative(uint64_t raw_time) {
 	return (double)raw_time * g_machTimeConversion;
 }
 
+double from_mach_time_interval(double interval) {
+	return interval - g_startTime * g_machTimeConversion;
+}
+
 double time_now_unix_utc() {
 	struct timespec tp;
 	clock_gettime(CLOCK_REALTIME, &tp);

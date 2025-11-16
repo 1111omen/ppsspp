@@ -18,6 +18,7 @@
 #include "Common/System/Request.h"
 #include "Common/GraphicsContext.h"
 #include "Common/Thread/ThreadUtil.h"
+#include "Common/TimeUtil.h"
 
 #include "Core/Config.h"
 #include "Core/ConfigValues.h"
