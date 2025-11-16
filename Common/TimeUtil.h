@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 
+#include "ppsspp_config.h"
+
 void TimeInit();
 
 // Seconds.
@@ -46,7 +48,7 @@ public:
 	int64_t ElapsedNanos() const;
 private:
 	uint64_t nativeStart_;
-#ifndef _WIN32
+#if !PPSSPP_PLATFORM(WINDOWS) && !PPSSPP_PLATFORM(MAC) && !PPSSPP_PLATFORM(IOS)
 	int64_t nsecs_;
 #endif
 };
