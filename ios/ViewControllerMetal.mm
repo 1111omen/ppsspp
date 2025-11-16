@@ -1,3 +1,6 @@
+#import <QuartzCore/CADisplayLink.h>
+#import <Metal/Metal.h>
+
 #import "AppDelegate.h"
 #import "ViewControllerMetal.h"
 #import "DisplayManager.h"
@@ -35,6 +38,8 @@ static std::thread g_renderLoopThread;
 
 @implementation PPSSPPViewControllerMetal {}
 
+PPSSPPMetalView *metalView;
+
 - (id)init {
 	self = [super init];
 	return self;
@@ -66,11 +71,7 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 	int desiredBackbufferSizeX = g_display.pixel_xres;
 	int desiredBackbufferSizeY = g_display.pixel_yres;
 
-	//WARN_LOG(G3D, "runVulkanRenderLoop. desiredBackbufferSizeX=%d desiredBackbufferSizeY=%d",
-	//	desiredBackbufferSizeX, desiredBackbufferSizeY);
-
 	if (!graphicsContext->InitFromRenderThread(metalLayer, desiredBackbufferSizeX, desiredBackbufferSizeY)) {
-		// On Android, if we get here, really no point in continuing.
 		// The UI is supposed to render on any device both on OpenGL and Vulkan. If either of those don't work
 		// on a device, we blacklist it. Hopefully we should have already failed in InitAPI anyway and reverted to GL back then.
 		ERROR_LOG(Log::G3D, "Failed to initialize graphics context.");
@@ -124,6 +125,9 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 
 	CAMetalLayer *metalLayer = (CAMetalLayer *)self.view.layer;
 	g_renderLoopThread = std::thread(VulkanRenderLoop, graphicsContext, metalLayer);
+
+	[(PPSSPPMetalView *)self.view startDisplayLink];
+
 	return true;
 }
 
@@ -134,6 +138,8 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 		ERROR_LOG(Log::System, "Render loop already exited");
 		return;
 	}
+	[(PPSSPPMetalView *)self.view stopDisplayLink];
+
 	_assert_(g_renderLoopThread.joinable());
 	exitRenderLoop = true;
 	g_renderLoopThread.join();
@@ -190,17 +196,8 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
-	[self hideKeyboard];
-
-	[[DisplayManager shared] setupDisplayListener];
 
 	INFO_LOG(Log::System, "Metal viewDidLoad");
-
-	UIScreen* screen = [(AppDelegate*)[UIApplication sharedApplication].delegate screen];
-	self.view.frame = [screen bounds];
-	self.view.multipleTouchEnabled = YES;
-	// self.view.insetsLayoutMarginsFromSafeArea = NO;
-	// self.view.clipsToBounds = YES;
 
 	graphicsContext = new IOSVulkanContext();
 
@@ -210,11 +207,8 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 		_assert_msg_(false, "Failed to init Vulkan");
 	}
 
-	if ([[GCController controllers] count] > 0) {
-		[self setupController:[[GCController controllers] firstObject]];
-	}
-
 	INFO_LOG(Log::G3D, "Detected size: %dx%d", g_display.pixel_xres, g_display.pixel_yres);
+	INFO_LOG(Log::System, "Done with metal viewDidLoad");
 }
 
 - (UIView *)getView {
@@ -265,5 +259,34 @@ void VulkanRenderLoop(IOSVulkanContext *graphicsContext, CAMetalLayer *metalLaye
 
 /** Returns a Metal-compatible layer. */
 +(Class) layerClass { return [CAMetalLayer class]; }
+
+- (void)dealloc {
+	[self stopDisplayLink];
+}
+
+#pragma mark - Display Link
+
+- (void)startDisplayLink {
+	NSLog(@"Starting display link");
+	self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(onVSync:)];
+	self.displayLink.preferredFramesPerSecond = 60;   // or 0 for native refresh rate
+	[self.displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+}
+
+- (void)stopDisplayLink {
+	NSLog(@"Stopping display link");
+	[self.displayLink invalidate];
+	self.displayLink = nil;
+}
+
+- (void)onVSync:(CADisplayLink *)dl {
+	static uint64_t presentId = 0;
+	presentId++;
+
+	NSTimeInterval timestamp = dl.timestamp;
+	NSTimeInterval targetTimestamp = dl.targetTimestamp;
+
+	NativeVSync(presentId, from_mach_time_interval(timestamp), from_mach_time_interval(targetTimestamp));
+}
 
 @end

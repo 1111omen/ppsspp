@@ -283,10 +283,11 @@ void GLRenderLoop(IOSGLESContext *graphicsContext) {
 	NSTimeInterval timestamp = dl.timestamp;
 	NSTimeInterval targetTimestamp = dl.targetTimestamp;
 
+	// Probably don't need to call this, we handle it ourselves below.
+	NativeVSync(presentId, from_mach_time_interval(timestamp), from_mach_time_interval(targetTimestamp));
+
 	// Ensure context is current before drawing
 	[EAGLContext setCurrentContext:self.glContext];
-
-	NativeVSync(presentId, from_mach_time_interval(timestamp), from_mach_time_interval(targetTimestamp));
 
 	// Trigger GLKView draw, which in turn calls glkView:drawInRect.
 	[self.glView display];
